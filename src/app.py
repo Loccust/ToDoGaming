@@ -1,24 +1,27 @@
-from flask import Flask, redirect
+from flasgger import Swagger
+from flask import Flask, redirect, request
+from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_restful import Api
+from flask import request
 
 from src.auth.routes import auth_bp
 from src.config import Config
 from src.models import db
 from src.resources.task_resource import TaskListResource, TaskResource
 from src.resources.user_resource import ProfileResource
-from src.config.swagger_config import swagger_config, swagger_template
-
-from flasgger import Swagger
+from src.swagger_config import swagger_config, swagger_template
 
 
-def init_app():
+def create_app():
     app: Flask = Flask(__name__)
     app.config.from_object(Config)
-    db.init_app(app)
 
+    CORS(app)
+    db.init_app(app)
     JWTManager(app)
     api = Api(app)
+
     Swagger(app, config=swagger_config, template=swagger_template)
 
     with app.app_context():

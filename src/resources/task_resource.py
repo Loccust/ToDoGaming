@@ -1,17 +1,18 @@
-from flask_jwt_extended import get_jwt_identity, jwt_required
 from flasgger import swag_from
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_restful import Resource, reqparse
 
 from src.models import Achievement, Task, User, db
+from src.utils.swagger.model_to_swagger_schema import model_to_swagger_schema
 
 task_parser = reqparse.RequestParser()
 task_parser.add_argument('title', type=str, required=True)
 task_parser.add_argument('description', type=str)
 task_parser.add_argument('completed', type=bool)
 
-ACHIEVEMENTS = [(50, "Primeiros Passos"), 
-                (100, "Produtivo(a)!"),
+ACHIEVEMENTS = [(50, "Primeiros Passos"), (100, "Produtivo(a)!"),
                 (200, "Mestre da Organização")]
+
 
 class TaskListResource(Resource):
     @swag_from({
@@ -22,10 +23,13 @@ class TaskListResource(Resource):
             200: {
                 'description': 'Lista de tarefas retornada com sucesso',
                 'examples': {
-                    'application/json': [
-                        {'id': 1, 'title': 'Comprar pão'},
-                        {'id': 2, 'title': 'Estudar Flask'}
-                    ]
+                    'application/json': [{
+                        'id': 1,
+                        'title': 'Comprar pão'
+                    }, {
+                        'id': 2,
+                        'title': 'Estudar Flask'
+                    }]
                 }
             },
             401: {
@@ -39,20 +43,28 @@ class TaskListResource(Resource):
         tasks = Task.query.filter_by(user_id=user_id).all()
         return [task.to_dict() for task in tasks], 200
 
-     @swag_from({
-        'tags': ['Tasks'],
-        'summary': 'Criar uma nova tarefa',
-        'requestBody': {
-            'required': True,
-            'content': {
-                'application/json': {
-                    'example': {"title": "Nova tarefa"}
-                }
+    @swag_from({
+        "tags": ["Tasks"],
+        "summary": "Criar nova tarefa",
+        'security': [{
+            'BearerAuth': []
+        }],
+        "parameters": [{
+            "name": "body",
+            "in": "body",
+            "required": True,
+            "schema": model_to_swagger_schema(
+                Task,
+                exclude_fields=["id", "user_id", "completed"],
+                required_fields=["title"])
+        }],
+        "responses": {
+            201: {
+                "description": "Tarefa criada com sucesso"
+            },
+            400: {
+                "description": "Erro nos dados"
             }
-        },
-        'responses': {
-            201: {'description': 'Tarefa criada com sucesso'},
-            400: {'description': 'Erro de validação'}
         }
     })
     @jwt_required()
@@ -63,25 +75,34 @@ class TaskListResource(Resource):
                     description=args.get('description', ''),
                     completed=args.get('completed', False),
                     user_id=user_id)
+        print(task)
         db.session.add(task)
         db.session.commit()
         return task.to_dict(), 201
 
+
 class TaskResource(Resource):
     @swag_from({
         'tags': ['Tasks'],
-        'summary': 'Obter detalhes de uma tarefa específica',
-        'parameters': [
-            {
-                'name': 'task_id',
-                'in': 'path',
-                'required': True,
-                'schema': {'type': 'integer'}
+        'summary': 'Obter detalhes de uma tarefa específica',        
+        'security': [{
+            'BearerAuth': []
+        }],
+        'parameters': [{
+            'name': 'task_id',
+            'in': 'path',
+            'required': True,
+            'schema': {
+                'type': 'integer'
             }
-        ],
+        }],
         'responses': {
-            200: {'description': 'Tarefa encontrada'},
-            404: {'description': 'Tarefa não encontrada'}
+            200: {
+                'description': 'Tarefa encontrada'
+            },
+            404: {
+                'description': 'Tarefa não encontrada'
+            }
         }
     })
     @jwt_required()
@@ -95,25 +116,35 @@ class TaskResource(Resource):
     @swag_from({
         'tags': ['Tasks'],
         'summary': 'Atualizar uma tarefa',
-        'parameters': [
-            {
-                'name': 'task_id',
-                'in': 'path',
-                'required': True,
-                'schema': {'type': 'integer'}
+        'security': [{
+            'BearerAuth': []
+        }],
+        'parameters': [{
+            'name': 'task_id',
+            'in': 'path',
+            'required': True,
+            'schema': {
+                'type': 'integer'
             }
-        ],
+        }],
         'requestBody': {
             'required': True,
             'content': {
                 'application/json': {
-                    'example': {"title": "Atualizado", "done": True}
+                    'example': {
+                        "title": "Atualizado",
+                        "done": True
+                    }
                 }
             }
         },
         'responses': {
-            200: {'description': 'Tarefa atualizada com sucesso'},
-            404: {'description': 'Tarefa não encontrada'}
+            200: {
+                'description': 'Tarefa atualizada com sucesso'
+            },
+            404: {
+                'description': 'Tarefa não encontrada'
+            }
         }
     })
     @jwt_required()
@@ -148,17 +179,24 @@ class TaskResource(Resource):
     @swag_from({
         'tags': ['Tasks'],
         'summary': 'Deletar uma tarefa',
-        'parameters': [
-            {
-                'name': 'task_id',
-                'in': 'path',
-                'required': True,
-                'schema': {'type': 'integer'}
+        'security': [{
+            'BearerAuth': []
+        }],
+        'parameters': [{
+            'name': 'task_id',
+            'in': 'path',
+            'required': True,
+            'schema': {
+                'type': 'integer'
             }
-        ],
+        }],
         'responses': {
-            204: {'description': 'Tarefa deletada com sucesso'},
-            404: {'description': 'Tarefa não encontrada'}
+            204: {
+                'description': 'Tarefa deletada com sucesso'
+            },
+            404: {
+                'description': 'Tarefa não encontrada'
+            }
         }
     })
     @jwt_required()
